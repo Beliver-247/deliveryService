@@ -1,13 +1,13 @@
 package com.savorySwift.deliveryService.controller;
 
-
-
 import com.savorySwift.deliveryService.model.Delivery;
 import com.savorySwift.deliveryService.model.Location;
 import com.savorySwift.deliveryService.service.DeliveryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/delivery")
@@ -25,6 +25,12 @@ public class DeliveryController {
                                                          @RequestBody StatusUpdateRequest request) {
         return ResponseEntity.ok(deliveryService.updateDeliveryStatus(deliveryId, request.getStatus()));
     }
+
+    @GetMapping
+    public ResponseEntity<List<Delivery>> getAllDeliveries() {
+        return ResponseEntity.ok(deliveryService.getAllDeliveries());
+    }
+
 
     @GetMapping("/{deliveryId}")
     public ResponseEntity<Delivery> getDelivery(@PathVariable String deliveryId) {
