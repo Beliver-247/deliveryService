@@ -1,7 +1,5 @@
 package com.savorySwift.deliveryService.controller;
 
-
-
 import com.savorySwift.deliveryService.model.Delivery;
 import com.savorySwift.deliveryService.model.Location;
 import com.savorySwift.deliveryService.service.DeliveryService;
