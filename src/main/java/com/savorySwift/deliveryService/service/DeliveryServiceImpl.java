@@ -1,6 +1,7 @@
 package com.savorySwift.deliveryService.service;
 
 import com.savorySwift.deliveryService.model.Delivery;
+import com.savorySwift.deliveryService.model.Driver;
 import com.savorySwift.deliveryService.model.Location;
 import com.savorySwift.deliveryService.repository.DeliveryRepository;
 import com.savorySwift.deliveryService.util.GoogleMapsUtil;
@@ -20,8 +21,12 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Autowired
     private DriverAssignmentService driverAssignmentService;
 
+    @Autowired
+    private DriverService driverService;
+
     @Override
-    public Delivery createDelivery(String orderId, Location deliveryLocation, Location restaurantLocation) {
+    public Delivery createDelivery(String orderId, String customerId, Location deliveryLocation, Location restaurantLocation) {
+        // Reverse geocode delivery and restaurant locations
         String deliveryAddress = googleMapsUtil.getAddressFromCoordinates(
                 deliveryLocation.getLatitude(), deliveryLocation.getLongitude());
         deliveryLocation.setAddress(deliveryAddress);
@@ -30,18 +35,26 @@ public class DeliveryServiceImpl implements DeliveryService {
                 restaurantLocation.getLatitude(), restaurantLocation.getLongitude());
         restaurantLocation.setAddress(restaurantAddress);
 
+        // Assign driver
+        String driverId = driverAssignmentService.assignDriver(deliveryLocation);
+
+        // 🔥 Fetch the assigned driver to get current location
+        Driver assignedDriver = driverService.getDriverById(driverId)
+                .orElseThrow(() -> new RuntimeException("Assigned driver not found"));
+
+        // 🔥 Set delivery fields
         Delivery delivery = new Delivery();
         delivery.setOrderId(orderId);
+        delivery.setCustomerId(customerId);
         delivery.setDeliveryLocation(deliveryLocation);
         delivery.setRestaurantLocation(restaurantLocation);
-        delivery.setStatus("PENDING");
-
-        String driverId = driverAssignmentService.assignDriver(deliveryLocation);
         delivery.setDriverId(driverId);
+        delivery.setDriverLocation(assignedDriver.getCurrentLocation()); // ✅ Now it's set
         delivery.setStatus("ASSIGNED");
 
         return deliveryRepository.save(delivery);
     }
+
 
 
     @Override

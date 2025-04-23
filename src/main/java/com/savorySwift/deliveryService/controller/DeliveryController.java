@@ -20,10 +20,12 @@ public class DeliveryController {
     public Delivery createDelivery(@RequestBody DeliveryRequest request) {
         return deliveryService.createDelivery(
                 request.getOrderId(),
+                request.getCustomerId(), // ✅
                 request.getDeliveryLocation(),
                 request.getRestaurantLocation()
         );
     }
+
 
     @PutMapping("/{deliveryId}/status")
     public ResponseEntity<Delivery> updateDeliveryStatus(@PathVariable String deliveryId,
@@ -44,32 +46,21 @@ public class DeliveryController {
     // Inner classes for request bodies
     public static class DeliveryRequest {
         private String orderId;
+        private String customerId; // ✅ New field
         private Location deliveryLocation;
-        private Location restaurantLocation; // ✅ New field
+        private Location restaurantLocation;
 
-        public String getOrderId() {
-            return orderId;
-        }
+        public String getOrderId() { return orderId; }
+        public void setOrderId(String orderId) { this.orderId = orderId; }
 
-        public void setOrderId(String orderId) {
-            this.orderId = orderId;
-        }
+        public String getCustomerId() { return customerId; } // ✅
+        public void setCustomerId(String customerId) { this.customerId = customerId; } // ✅
 
-        public Location getDeliveryLocation() {
-            return deliveryLocation;
-        }
+        public Location getDeliveryLocation() { return deliveryLocation; }
+        public void setDeliveryLocation(Location deliveryLocation) { this.deliveryLocation = deliveryLocation; }
 
-        public void setDeliveryLocation(Location deliveryLocation) {
-            this.deliveryLocation = deliveryLocation;
-        }
-
-        public Location getRestaurantLocation() {
-            return restaurantLocation;
-        }
-
-        public void setRestaurantLocation(Location restaurantLocation) {
-            this.restaurantLocation = restaurantLocation;
-        }
+        public Location getRestaurantLocation() { return restaurantLocation; }
+        public void setRestaurantLocation(Location restaurantLocation) { this.restaurantLocation = restaurantLocation; }
     }
 
     public static class StatusUpdateRequest {

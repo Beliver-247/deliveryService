@@ -6,7 +6,7 @@ import com.savorySwift.deliveryService.model.Location;
 import java.util.List;
 
 public interface DeliveryService {
-    Delivery createDelivery(String orderId, Location deliveryLocation, Location restaurantLocation); // ✅ Updated
+    Delivery createDelivery(String orderId, String customerId, Location deliveryLocation, Location restaurantLocation);
     Delivery updateDeliveryStatus(String deliveryId, String status);
     Delivery getDeliveryById(String deliveryId);
     List<Delivery> getAllDeliveries();
