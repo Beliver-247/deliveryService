@@ -34,6 +34,20 @@ public class DriverAssignmentService {
         return closestDriver.getId();
     }
 
+    // In DriverAssignmentService.java
+    public String proposeDriverAssignment(Location orderLocation) {
+        List<Driver> availableDrivers = driverRepository.findByAvailableTrue();
+        if (availableDrivers.isEmpty()) throw new RuntimeException("No available drivers");
+
+        Driver closestDriver = availableDrivers.stream()
+                .min(Comparator.comparingDouble(driver -> calculateDistance(
+                        orderLocation.getLatitude(), orderLocation.getLongitude(),
+                        driver.getCurrentLocation().getLatitude(), driver.getCurrentLocation().getLongitude())))
+                .orElseThrow(() -> new RuntimeException("No available drivers"));
+
+        return closestDriver.getId(); // Only propose, don't assign yet
+    }
+
     // ✅ Haversine formula to calculate distance between two geo coordinates (in kilometers)
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
         final int EARTH_RADIUS_KM = 6371;
