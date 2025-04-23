@@ -10,6 +10,8 @@ public class Driver {
     private String name;
     private boolean available;
     private Location currentLocation;
+    private String contactNumber; // New field
+    private String vehicleId;     // New field
 
     // Getters and Setters
     public String getId() { return id; }
@@ -20,4 +22,8 @@ public class Driver {
     public void setAvailable(boolean available) { this.available = available; }
     public Location getCurrentLocation() { return currentLocation; }
     public void setCurrentLocation(Location currentLocation) { this.currentLocation = currentLocation; }
+    public String getContactNumber() { return contactNumber; }
+    public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
+    public String getVehicleId() { return vehicleId; }
+    public void setVehicleId(String vehicleId) { this.vehicleId = vehicleId; }
 }
