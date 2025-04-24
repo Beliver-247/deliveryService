@@ -2,16 +2,19 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import SockJS from 'sockjs-client';
-import { Client } from '@stomp/stompjs'; // ✅ Updated import
+import { Client } from '@stomp/stompjs';
 import Map from '../components/Map';
 import { formatTimestamp } from '../utils/helpers';
+import { getDriverById } from '../services/api';
 
 function TrackDelivery() {
   const { deliveryId } = useParams();
   const [delivery, setDelivery] = useState(null);
+  const [driver, setDriver] = useState(null);
   const [driverLocation, setDriverLocation] = useState(null);
   const [status, setStatus] = useState('');
-  const clientRef = useRef(null); // 👈 To store the client for cleanup
+  const [error, setError] = useState(null);
+  const clientRef = useRef(null);
 
   useEffect(() => {
     const fetchDelivery = async () => {
@@ -20,8 +23,22 @@ function TrackDelivery() {
         setDelivery(response.data);
         setDriverLocation(response.data.driverLocation);
         setStatus(response.data.status);
+        setError(null);
+
+        // Fetch driver details if driverId exists
+        if (response.data.driverId) {
+          try {
+            const driverResponse = await getDriverById(response.data.driverId);
+            setDriver(driverResponse.data);
+          } catch (err) {
+            console.error('Error fetching driver:', err);
+            setError('Failed to load driver details');
+            setDriver(null);
+          }
+        }
       } catch (error) {
         console.error('Error fetching delivery:', error);
+        setError('Failed to load delivery');
       }
     };
 
@@ -81,14 +98,44 @@ function TrackDelivery() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Track Delivery: {delivery.orderId}</h1>
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <h2 className="text-xl font-semibold mb-2">Delivery Details</h2>
-          <p><strong>Status:</strong> {status}</p>
-          <p><strong>Customer ID:</strong> {delivery.customerId}</p>
-          <p><strong>Delivery Address:</strong> {delivery.deliveryLocation.address}</p>
-          <p><strong>Restaurant Address:</strong> {delivery.restaurantLocation.address}</p>
-          <p><strong>Driver ID:</strong> {delivery.driverId}</p>
+          <p>
+            <strong>Status:</strong> {status}
+          </p>
+          <p>
+            <strong>Customer ID:</strong> {delivery.customerId}
+          </p>
+          <p>
+            <strong>Delivery Address:</strong> {delivery.deliveryLocation.address}
+          </p>
+          <p>
+            <strong>Restaurant Address:</strong> {delivery.restaurantLocation.address}
+          </p>
+          {delivery.driverId && driver ? (
+            <>
+              <p>
+                <strong>Driver Name:</strong> {driver.name}
+              </p>
+              <p>
+                <strong>Driver Contact:</strong> {driver.contactNumber}
+              </p>
+            </>
+          ) : delivery.driverId ? (
+            <p>
+              <strong>Driver:</strong> Loading driver details...
+            </p>
+          ) : (
+            <p>
+              <strong>Driver:</strong> Not assigned
+            </p>
+          )}
           <h3 className="text-lg font-semibold mt-4">Status History</h3>
           <ul className="list-disc pl-5">
             {delivery.statusHistory.map((status, index) => (
