@@ -25,6 +25,10 @@ public class Delivery {
     public void setStatusHistory(List<StatusChange> statusHistory) { this.statusHistory = statusHistory; }
 
     public void addStatusChange(String status) {
+        if (status == null) {
+            System.out.println("Warning: Attempted to add null status to history");
+            return; // Prevent adding null status
+        }
         this.statusHistory.add(new StatusChange(status, Instant.now()));
     }
 
