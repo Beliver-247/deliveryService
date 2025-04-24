@@ -60,7 +60,6 @@ public class DeliveryController {
 
         Delivery delivery = deliveryService.getDeliveryById(deliveryId);
 
-        // Validate delivery state
         if (!delivery.getStatus().equals("WAITING_FOR_DRIVER_RESPONSE")) {
             throw new IllegalStateException("Delivery not in acceptable state");
         }
@@ -69,35 +68,28 @@ public class DeliveryController {
             throw new IllegalStateException("No driver assigned to this delivery");
         }
 
-        // Handle response
         if (request.getResponse().equalsIgnoreCase("ACCEPT")) {
             delivery.setAssignmentStatus("ACCEPTED");
             delivery.setStatus("DRIVER_ASSIGNED");
             delivery.addStatusChange("DRIVER_ASSIGNED");
 
-            // Mark driver as unavailable
             Driver driver = driverService.getDriverById(delivery.getDriverId())
                     .orElseThrow(() -> new RuntimeException("Driver not found"));
             driver.setAvailable(false);
             driverService.updateDriver(delivery.getDriverId(), driver);
 
-            // Notify driver response for ACCEPT
             webSocketService.notifyDriverResponse(deliveryId, "ACCEPT");
 
-            // Log for debugging
             System.out.println("Driver accepted: " + delivery.getStatus() + ", Assignment: " + delivery.getAssignmentStatus());
         } else if (request.getResponse().equalsIgnoreCase("REJECT")) {
-            // Mark current assignment as rejected
             delivery.setAssignmentStatus("REJECTED");
             delivery.addStatusChange("DRIVER_REJECTED");
 
-            // Mark the rejecting driver as available
             Driver rejectingDriver = driverService.getDriverById(delivery.getDriverId())
                     .orElseThrow(() -> new RuntimeException("Rejecting driver not found"));
             rejectingDriver.setAvailable(true);
             driverService.updateDriver(rejectingDriver.getId(), rejectingDriver);
 
-            // Propose a new driver
             String newDriverId;
             try {
                 newDriverId = driverAssignmentService.proposeDriverAssignment(delivery.getDeliveryLocation());
@@ -109,21 +101,17 @@ public class DeliveryController {
                 return ResponseEntity.ok(updatedDelivery);
             }
 
-            // Fetch new driver's details
             Driver newDriver = driverService.getDriverById(newDriverId)
                     .orElseThrow(() -> new RuntimeException("New driver not found"));
 
-            // Update delivery with new driver
             delivery.setDriverId(newDriverId);
             delivery.setDriverLocation(newDriver.getCurrentLocation());
             delivery.setAssignmentStatus("PENDING");
             delivery.setStatus("WAITING_FOR_DRIVER_RESPONSE");
             delivery.addStatusChange("REASSIGNED_TO_NEW_DRIVER");
 
-            // Notify via WebSocket about rejection and reassignment
             webSocketService.notifyDriverResponse(deliveryId, "REJECTED_AND_REASSIGNED");
 
-            // Log for debugging
             System.out.println("Driver rejected, reassigned to new driver: " + newDriverId +
                     ", Status: " + delivery.getStatus() +
                     ", Assignment: " + delivery.getAssignmentStatus());
@@ -131,16 +119,13 @@ public class DeliveryController {
             throw new IllegalArgumentException("Invalid response: must be ACCEPT or REJECT");
         }
 
-        // Save the updated delivery
         Delivery updatedDelivery = deliveryService.updateDelivery(delivery);
 
-        // Verify the saved state
         System.out.println("Saved delivery: Status=" + updatedDelivery.getStatus() +
                 ", Assignment=" + updatedDelivery.getAssignmentStatus() +
                 ", DriverId=" + updatedDelivery.getDriverId() +
                 ", History=" + updatedDelivery.getStatusHistory());
 
-        // Send WebSocket update for real-time tracking
         webSocketService.sendRealTimeLocationUpdate(
                 deliveryId,
                 updatedDelivery.getStatus(),
@@ -186,6 +171,35 @@ public class DeliveryController {
         return ResponseEntity.ok(deliveryService.updateDriverLocation(deliveryId, location));
     }
 
+    @PutMapping("/{deliveryId}/confirm")
+    public ResponseEntity<Delivery> confirmDelivery(@PathVariable String deliveryId) {
+        Delivery delivery = deliveryService.getDeliveryById(deliveryId);
+
+        if (!delivery.getStatus().equals("DRIVER_ARRIVED")) {
+            throw new IllegalStateException("Delivery can only be confirmed when driver has arrived");
+        }
+
+        delivery.setStatus("DELIVERY_CONFIRMED");
+        delivery.addStatusChange("DELIVERY_CONFIRMED");
+
+        if (delivery.getDriverId() != null) {
+            Driver driver = driverService.getDriverById(delivery.getDriverId())
+                    .orElseThrow(() -> new RuntimeException("Driver not found"));
+            driver.setAvailable(true);
+            driverService.updateDriver(delivery.getDriverId(), driver);
+        }
+
+        Delivery updatedDelivery = deliveryService.updateDelivery(delivery);
+
+        webSocketService.sendRealTimeLocationUpdate(
+                deliveryId,
+                updatedDelivery.getStatus(),
+                updatedDelivery.getDriverLocation()
+        );
+
+        return ResponseEntity.ok(updatedDelivery);
+    }
+
     @GetMapping
     public ResponseEntity<List<Delivery>> getAllDeliveries() {
         return ResponseEntity.ok(deliveryService.getAllDeliveries());
@@ -201,7 +215,6 @@ public class DeliveryController {
         deliveryService.deleteDelivery(deliveryId);
         return ResponseEntity.noContent().build();
     }
-
 
     // Request DTOs
     public static class DeliveryRequest {

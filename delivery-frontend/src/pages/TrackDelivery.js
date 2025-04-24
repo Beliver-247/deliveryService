@@ -6,21 +6,22 @@ import { Loader } from '@googlemaps/js-api-loader';
 import Map from '../components/Map';
 import { formatTimestamp } from '../utils/helpers';
 import toast, { Toaster } from 'react-hot-toast';
-import { getDeliveryById, getDriverById } from '../services/api';
+import { getDeliveryById, getDriverById, confirmDelivery } from '../services/api';
 
 function TrackDelivery() {
   const { deliveryId } = useParams();
   const [delivery, setDelivery] = useState(null);
-  const [driver, setDriver] = useState(null); // State for driver details
+  const [driver, setDriver] = useState(null);
   const [driverLocation, setDriverLocation] = useState(null);
   const [status, setStatus] = useState('');
   const [routePath, setRoutePath] = useState([]);
+  const [isConfirming, setIsConfirming] = useState(false);
   const clientRef = useRef(null);
   const googleMapsRef = useRef(null);
 
   useEffect(() => {
     const loader = new Loader({
-      apiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY, // Replace with your API key
+      apiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
       version: 'weekly',
       libraries: ['places', 'geometry'],
     });
@@ -38,7 +39,6 @@ function TrackDelivery() {
         if (response.data.driverLocation) {
           calculateRoute(response.data);
         }
-        // Fetch driver details if driverId exists
         if (response.data.driverId) {
           try {
             const driverResponse = await getDriverById(response.data.driverId);
@@ -65,11 +65,9 @@ function TrackDelivery() {
           console.log('Received WebSocket update:', update);
           setStatus(update.status);
           setDriverLocation(update.driverLocation);
-          // Update driver details if provided in WebSocket message
           if (update.driver) {
             setDriver(update.driver);
           }
-          // Show toast notifications for status changes
           switch (update.status) {
             case 'DRIVER_ON_WAY_TO_RESTAURANT':
               toast.success('Driver is on the way to the restaurant');
@@ -85,6 +83,9 @@ function TrackDelivery() {
               break;
             case 'DRIVER_ARRIVED':
               toast.success('Driver has arrived at your location');
+              break;
+            case 'DELIVERY_CONFIRMED':
+              toast.success('Delivery confirmed');
               break;
             default:
               break;
@@ -109,7 +110,7 @@ function TrackDelivery() {
 
   const calculateRoute = async (deliveryData) => {
     if (!googleMapsRef.current || !deliveryData || !deliveryData.driverLocation) return;
-  
+
     const directionsService = new googleMapsRef.current.maps.DirectionsService();
     try {
       const result = await new Promise((resolve, reject) => {
@@ -141,7 +142,7 @@ function TrackDelivery() {
           }
         );
       });
-  
+
       const path = result.routes[0].overview_path.map((point) => ({
         lat: point.lat(),
         lng: point.lng(),
@@ -150,6 +151,21 @@ function TrackDelivery() {
     } catch (err) {
       console.error('Error calculating route:', err);
       toast.error('Failed to load route');
+    }
+  };
+
+  const handleConfirmDelivery = async () => {
+    if (window.confirm('Are you sure you want to confirm the delivery?')) {
+      setIsConfirming(true);
+      try {
+        await confirmDelivery(deliveryId);
+        toast.success('Delivery confirmed successfully');
+      } catch (err) {
+        console.error('Error confirming delivery:', err);
+        toast.error('Failed to confirm delivery');
+      } finally {
+        setIsConfirming(false);
+      }
     }
   };
 
@@ -210,6 +226,17 @@ function TrackDelivery() {
             <p>
               <strong>Driver:</strong> Not assigned
             </p>
+          )}
+          {status === 'DRIVER_ARRIVED' && (
+            <button
+              className={`mt-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ${
+                isConfirming ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              onClick={handleConfirmDelivery}
+              disabled={isConfirming}
+            >
+              {isConfirming ? 'Confirming...' : 'Confirm Delivery'}
+            </button>
           )}
           <h3 className="text-lg font-semibold mt-4">Status History</h3>
           <ul className="list-disc pl-5">

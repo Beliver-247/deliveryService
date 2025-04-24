@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import DeliveryCard from '../components/DeliveryCard';
-import DriverCard from '../components/DriverCard';
 import { getDeliveries, getDrivers, deleteDelivery } from '../services/api';
 
 function ViewDeliveries() {
@@ -75,18 +74,6 @@ function ViewDeliveries() {
                     Delete
                   </button>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Drivers</h2>
-          <div className="space-y-2">
-            {drivers.length === 0 ? (
-              <p className="text-gray-500">No drivers found.</p>
-            ) : (
-              drivers.map((driver) => (
-                <DriverCard key={driver.id} driver={driver} />
               ))
             )}
           </div>

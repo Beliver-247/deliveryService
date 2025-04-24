@@ -1,15 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getDriverById } from '../services/api';
+import { getDriverById, confirmDelivery } from '../services/api';
+import toast from 'react-hot-toast';
 
 function DeliveryCard({ delivery }) {
   const navigate = useNavigate();
   const [driver, setDriver] = useState(null);
   const [error, setError] = useState(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   useEffect(() => {
     if (delivery.driverId) {
-      // Fetch driver details
       getDriverById(delivery.driverId)
         .then((response) => {
           setDriver(response.data);
@@ -22,6 +23,21 @@ function DeliveryCard({ delivery }) {
         });
     }
   }, [delivery.driverId]);
+
+  const handleConfirmDelivery = async () => {
+    if (window.confirm('Are you sure you want to confirm the delivery?')) {
+      setIsConfirming(true);
+      try {
+        await confirmDelivery(delivery.id);
+        toast.success('Delivery confirmed successfully');
+      } catch (err) {
+        console.error('Error confirming delivery:', err);
+        toast.error('Failed to confirm delivery');
+      } finally {
+        setIsConfirming(false);
+      }
+    }
+  };
 
   return (
     <div
@@ -58,6 +74,20 @@ function DeliveryCard({ delivery }) {
         <p>
           <strong>Driver:</strong> Not assigned
         </p>
+      )}
+      {delivery.status === 'DRIVER_ARRIVED' && (
+        <button
+          className={`mt-2 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ${
+            isConfirming ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent card click navigation
+            handleConfirmDelivery();
+          }}
+          disabled={isConfirming}
+        >
+          {isConfirming ? 'Confirming...' : 'Confirm Delivery'}
+        </button>
       )}
     </div>
   );
