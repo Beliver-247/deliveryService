@@ -40,29 +40,45 @@ public class DeliveryServiceImpl implements DeliveryService {
                 restaurantLocation.getLatitude(), restaurantLocation.getLongitude());
         restaurantLocation.setAddress(restaurantAddress);
 
-        // Assign driver
-        String driverId = driverAssignmentService.assignDriver(deliveryLocation);
+        // Propose driver instead of assigning
+        String driverId = driverAssignmentService.proposeDriverAssignment(deliveryLocation);
 
-        // 🔥 Fetch the assigned driver to get current location
-        Driver assignedDriver = driverService.getDriverById(driverId)
-                .orElseThrow(() -> new RuntimeException("Assigned driver not found"));
+        // Fetch the proposed driver to get current location
+        Driver proposedDriver = driverService.getDriverById(driverId)
+                .orElseThrow(() -> new RuntimeException("Proposed driver not found"));
 
-        // 🔥 Set delivery fields
+        // Set delivery fields
         Delivery delivery = new Delivery();
         delivery.setOrderId(orderId);
         delivery.setCustomerId(customerId);
         delivery.setDeliveryLocation(deliveryLocation);
         delivery.setRestaurantLocation(restaurantLocation);
         delivery.setDriverId(driverId);
-        delivery.setDriverLocation(assignedDriver.getCurrentLocation()); // ✅ Now it's set
-        delivery.setStatus("ASSIGNED");
+        delivery.setDriverLocation(proposedDriver.getCurrentLocation());
+        delivery.setStatus("WAITING_FOR_DRIVER_RESPONSE"); // Set initial status
+        delivery.setAssignmentStatus("PENDING"); // Set pending assignment status
+        delivery.addStatusChange("WAITING_FOR_DRIVER_RESPONSE"); // Log status change
 
         return deliveryRepository.save(delivery);
     }
 
     @Override
     public Delivery updateDelivery(Delivery delivery) {
-        return deliveryRepository.save(delivery);
+        // Log the incoming delivery state
+        System.out.println("Updating delivery: ID=" + delivery.getId() +
+                ", Status=" + delivery.getStatus() +
+                ", Assignment=" + delivery.getAssignmentStatus() +
+                ", History=" + delivery.getStatusHistory());
+
+        Delivery savedDelivery = deliveryRepository.save(delivery);
+
+        // Log the saved delivery state
+        System.out.println("Saved delivery: ID=" + savedDelivery.getId() +
+                ", Status=" + savedDelivery.getStatus() +
+                ", Assignment=" + savedDelivery.getAssignmentStatus() +
+                ", History=" + savedDelivery.getStatusHistory());
+
+        return savedDelivery;
     }
 
 
