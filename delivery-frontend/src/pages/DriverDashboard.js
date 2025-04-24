@@ -8,12 +8,12 @@ function DriverDashboard() {
   const stompClientRef = useRef(null);
   const subscriptionsRef = useRef([]);
 
+  // Fetch initial deliveries
   useEffect(() => {
-    // Fetch initial deliveries
     const fetchDeliveries = async () => {
       try {
         const response = await axios.get('http://localhost:8080/api/delivery');
-        setDeliveries(response.data);
+        setDeliveries(response.data.filter(d => d.status === 'WAITING_FOR_DRIVER_RESPONSE'));
       } catch (error) {
         console.error('Error fetching deliveries:', error);
       }
@@ -22,8 +22,8 @@ function DriverDashboard() {
     fetchDeliveries();
   }, []);
 
+  // Set up WebSocket connection
   useEffect(() => {
-    // Initialize WebSocket
     const client = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8080/delivery-websocket'),
       debug: (str) => console.log(str),
@@ -38,7 +38,7 @@ function DriverDashboard() {
         const newDelivery = JSON.parse(message.body);
         if (newDelivery.status === 'WAITING_FOR_DRIVER_RESPONSE') {
           setDeliveries((prev) => {
-            // Avoid duplicates
+            // Avoid duplicates by checking if delivery ID already exists
             if (prev.some((d) => d.id === newDelivery.id)) {
               return prev;
             }
@@ -48,18 +48,18 @@ function DriverDashboard() {
       });
       subscriptionsRef.current.push(newDeliverySub);
 
-      // Subscribe to driver response updates for existing deliveries
-      deliveries.forEach((delivery) => {
-        const sub = client.subscribe(`/topic/delivery/${delivery.id}/driver-response`, (message) => {
-          const update = JSON.parse(message.body);
-          setDeliveries((prev) =>
-            prev.map((d) =>
-              d.id === delivery.id ? { ...d, status: update.response === 'ACCEPT' ? 'DRIVER_ASSIGNED' : 'DRIVER_REJECTED' } : d
-            )
-          );
-        });
-        subscriptionsRef.current.push(sub);
+      // Subscribe to driver response updates for all deliveries
+      const driverResponseSub = client.subscribe('/topic/driver-responses', (message) => {
+        const update = JSON.parse(message.body);
+        setDeliveries((prev) =>
+          prev.map((d) =>
+            d.id === update.deliveryId
+              ? { ...d, status: update.response === 'ACCEPT' ? 'DRIVER_ASSIGNED' : 'DRIVER_REJECTED' }
+              : d
+          ).filter((d) => d.status === 'WAITING_FOR_DRIVER_RESPONSE') // Remove non-pending deliveries
+        );
       });
+      subscriptionsRef.current.push(driverResponseSub);
     };
 
     client.onStompError = (frame) => {
@@ -68,7 +68,7 @@ function DriverDashboard() {
 
     client.activate();
 
-    // Cleanup WebSocket connection and subscriptions
+    // Cleanup on unmount
     return () => {
       if (stompClientRef.current) {
         subscriptionsRef.current.forEach((sub) => sub.unsubscribe());
@@ -77,7 +77,7 @@ function DriverDashboard() {
         console.log('WebSocket disconnected');
       }
     };
-  }, [deliveries]);
+  }, []);
 
   const handleDriverResponse = async (deliveryId, response) => {
     try {
@@ -85,11 +85,7 @@ function DriverDashboard() {
         response,
       });
       setDeliveries((prev) =>
-        prev.map((d) =>
-          d.id === deliveryId
-            ? { ...d, status: response === 'ACCEPT' ? 'DRIVER_ASSIGNED' : 'DRIVER_REJECTED' }
-            : d
-        )
+        prev.filter((d) => d.id !== deliveryId) // Remove delivery from list after response
       );
     } catch (error) {
       console.error('Error sending driver response:', error);
@@ -101,9 +97,10 @@ function DriverDashboard() {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Driver Dashboard</h1>
       <ul className="space-y-4">
-        {deliveries
-          .filter((delivery) => delivery.status === 'WAITING_FOR_DRIVER_RESPONSE')
-          .map((delivery) => (
+        {deliveries.length === 0 ? (
+          <p className="text-gray-500">No deliveries awaiting driver assignment.</p>
+        ) : (
+          deliveries.map((delivery) => (
             <li key={delivery.id} className="border p-4 rounded-md">
               <p><strong>Order ID:</strong> {delivery.orderId}</p>
               <p><strong>Customer ID:</strong> {delivery.customerId}</p>
@@ -125,7 +122,8 @@ function DriverDashboard() {
                 </button>
               </div>
             </li>
-          ))}
+          ))
+        )}
       </ul>
     </div>
   );

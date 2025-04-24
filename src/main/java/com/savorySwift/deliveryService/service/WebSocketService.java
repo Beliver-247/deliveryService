@@ -1,5 +1,6 @@
 package com.savorySwift.deliveryService.service;
 
+import com.savorySwift.deliveryService.model.Delivery;
 import com.savorySwift.deliveryService.model.Location;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -23,6 +24,12 @@ public class WebSocketService {
         );
     }
 
+
+    // New method to notify about new deliveries
+    public void notifyNewDelivery(Delivery delivery) {
+        messagingTemplate.convertAndSend("/topic/deliveries", delivery);
+    }
+
     public static class DeliveryUpdate {
         private String status;
         private Location driverLocation;
@@ -32,10 +39,11 @@ public class WebSocketService {
             this.driverLocation = driverLocation;
         }
 
-        // Getters
         public String getStatus() { return status; }
         public Location getDriverLocation() { return driverLocation; }
     }
+
+
 
     public static class DriverResponseMessage {
         private String response;

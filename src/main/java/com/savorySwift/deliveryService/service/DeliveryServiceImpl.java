@@ -59,7 +59,12 @@ public class DeliveryServiceImpl implements DeliveryService {
         delivery.setAssignmentStatus("PENDING"); // Set pending assignment status
         delivery.addStatusChange("WAITING_FOR_DRIVER_RESPONSE"); // Log status change
 
-        return deliveryRepository.save(delivery);
+        Delivery savedDelivery = deliveryRepository.save(delivery);
+
+        // Notify clients about the new delivery
+        webSocketService.notifyNewDelivery(savedDelivery);
+
+        return savedDelivery;
     }
 
     @Override
