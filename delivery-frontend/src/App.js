@@ -3,6 +3,7 @@ import CreateDelivery from './pages/CreateDelivery';
 import ViewDeliveries from './pages/ViewDeliveries';
 import TrackDelivery from './pages/TrackDelivery';
 import DriverDashboard from './pages/DriverDashboard';
+import UpdateDriverAvailability from './pages/UpdateDriverAvailability';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
           <a href="/" className="text-white hover:underline">Create Delivery</a>
           <a href="/deliveries" className="text-white hover:underline">View Deliveries</a>
           <a href="/driver" className="text-white hover:underline">Driver Dashboard</a>
+          <a href="/drivers/availability" className="text-white hover:underline">Update Driver Availability</a>
         </div>
       </nav>
       <Routes>
@@ -19,6 +21,7 @@ function App() {
         <Route path="/deliveries" element={<ViewDeliveries />} />
         <Route path="/deliveries/:deliveryId" element={<TrackDelivery />} />
         <Route path="/driver" element={<DriverDashboard />} />
+        <Route path="/drivers/availability" element={<UpdateDriverAvailability />} />
       </Routes>
     </BrowserRouter>
   );

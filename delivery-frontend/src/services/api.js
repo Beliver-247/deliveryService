@@ -11,3 +11,5 @@ export const updateDriverResponse = (deliveryId, response) =>
   axios.put(`${API_BASE_URL}/delivery/${deliveryId}/driver-response`, { response });
 
 export const deleteDelivery = (deliveryId) => axios.delete(`${API_BASE_URL}/delivery/${deliveryId}`);
+export const updateDriver = (driverId, data) =>
+  axios.put(`${API_BASE_URL}/drivers/${driverId}`, data);

@@ -1,17 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@googlemaps/js-api-loader';
-import axios from 'axios';
+import SockJS from 'sockjs-client';
+import { Client } from '@stomp/stompjs';
+import { createDelivery, assignDriver, deleteDelivery } from '../services/api';
 
 function CreateDelivery() {
   const [customerId, setCustomerId] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState(null);
   const [restaurantLocation, setRestaurantLocation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [deliveryId, setDeliveryId] = useState(null);
   const navigate = useNavigate();
   const mapRef = useRef(null);
   const autocompleteDeliveryRef = useRef(null);
   const autocompleteRestaurantRef = useRef(null);
+  const stompClientRef = useRef(null);
 
   useEffect(() => {
     const loader = new Loader({
@@ -19,30 +23,30 @@ function CreateDelivery() {
       version: 'weekly',
       libraries: ['places'],
     });
-  
+
     loader.load().then(() => {
       const mapCenter = { lat: 6.9147, lng: 79.9710 }; // Near SLIIT
-  
+
       const map = new window.google.maps.Map(mapRef.current, {
         center: mapCenter,
         zoom: 13,
       });
-  
+
       const autocompleteOptions = {
         location: new window.google.maps.LatLng(mapCenter),
         radius: 5000, // 5km radius
         componentRestrictions: { country: 'lk' },
       };
-  
+
       // Delivery
       autocompleteDeliveryRef.current = new window.google.maps.places.Autocomplete(
         document.getElementById('delivery-address'),
         {
           ...autocompleteOptions,
-          types: ['geocode'], // more flexible than 'address'
+          types: ['geocode'],
         }
       );
-  
+
       autocompleteDeliveryRef.current.addListener('place_changed', () => {
         const place = autocompleteDeliveryRef.current.getPlace();
         if (place.geometry) {
@@ -52,7 +56,7 @@ function CreateDelivery() {
             address: place.formatted_address,
             lastUpdated: new Date().toISOString(),
           });
-  
+
           map.setCenter(place.geometry.location);
           new window.google.maps.Marker({
             position: place.geometry.location,
@@ -61,7 +65,7 @@ function CreateDelivery() {
           });
         }
       });
-  
+
       // Restaurant
       autocompleteRestaurantRef.current = new window.google.maps.places.Autocomplete(
         document.getElementById('restaurant-address'),
@@ -70,7 +74,7 @@ function CreateDelivery() {
           types: ['establishment'],
         }
       );
-  
+
       autocompleteRestaurantRef.current.addListener('place_changed', () => {
         const place = autocompleteRestaurantRef.current.getPlace();
         if (place.geometry) {
@@ -80,7 +84,7 @@ function CreateDelivery() {
             address: place.formatted_address,
             lastUpdated: new Date().toISOString(),
           });
-  
+
           map.setCenter(place.geometry.location);
           new window.google.maps.Marker({
             position: place.geometry.location,
@@ -91,7 +95,6 @@ function CreateDelivery() {
       });
     });
   }, []);
-  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,27 +104,84 @@ function CreateDelivery() {
     }
     setIsLoading(true);
     try {
-      const response = await axios.post('http://localhost:8080/api/delivery', {
+      const response = await createDelivery({
         orderId: `ORDER_${Date.now()}`,
         customerId,
         deliveryLocation,
         restaurantLocation,
       });
-      await axios.post(`http://localhost:8080/api/delivery/${response.data.id}/assign-driver`);
-      setIsLoading(false);
-      navigate('/deliveries');
+      const newDeliveryId = response.data.id;
+      setDeliveryId(newDeliveryId);
+
+      // Initialize WebSocket to listen for driver response
+      const client = new Client({
+        webSocketFactory: () => new SockJS('http://localhost:8080/delivery-websocket'),
+        reconnectDelay: 5000,
+      });
+
+      client.onConnect = () => {
+        stompClientRef.current = client;
+        client.subscribe(`/topic/delivery/${newDeliveryId}/driver-response`, (message) => {
+          const update = JSON.parse(message.body);
+          if (update.response === 'ACCEPT') {
+            setIsLoading(false);
+            navigate('/deliveries');
+          }
+        });
+      };
+
+      client.onStompError = (frame) => {
+        console.error('Broker error:', frame.headers['message']);
+      };
+
+      client.activate();
+
+      // Assign driver
+      await assignDriver(newDeliveryId);
     } catch (error) {
       console.error('Error creating delivery:', error);
       alert('Failed to create delivery');
       setIsLoading(false);
+      setDeliveryId(null);
     }
   };
+
+  const handleCancel = async () => {
+    if (deliveryId) {
+      try {
+        await deleteDelivery(deliveryId);
+        if (stompClientRef.current) {
+          stompClientRef.current.deactivate();
+        }
+        navigate('/deliveries');
+      } catch (error) {
+        console.error('Error deleting delivery:', error);
+        alert('Failed to cancel delivery');
+      }
+    } else {
+      navigate('/deliveries');
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (stompClientRef.current) {
+        stompClientRef.current.deactivate();
+      }
+    };
+  }, []);
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
         <p className="mt-4 text-lg">Assigning Driver...</p>
+        <button
+          onClick={handleCancel}
+          className="mt-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+        >
+          Cancel Delivery
+        </button>
       </div>
     );
   }
