@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { Loader } from '@googlemaps/js-api-loader';
