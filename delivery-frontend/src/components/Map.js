@@ -1,35 +1,50 @@
 import { useEffect, useRef } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
 
-function Map({ center, zoom, markers = [] }) {
+function Map({ center, zoom, markers, polylinePath }) {
   const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
 
   useEffect(() => {
-    const loader = new Loader({
-      apiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY, // Loaded from .env
-      version: 'weekly',
+    if (!window.google || !window.google.maps) {
+      console.error('Google Maps API not loaded');
+      return;
+    }
+
+    // Initialize map
+    mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+      center,
+      zoom,
+      mapTypeId: 'roadmap',
     });
 
-    loader.load().then(() => {
-      if (mapRef.current && window.google) {
-        const map = new window.google.maps.Map(mapRef.current, {
-          center,
-          zoom,
-        });
-
-        markers.forEach(({ position, title, icon }) => {
-          new window.google.maps.Marker({
-            position,
-            map,
-            title,
-            icon,
-          });
-        });
-      }
+    // Add markers
+    markers.forEach((marker) => {
+      new window.google.maps.Marker({
+        position: marker.position,
+        map: mapInstanceRef.current,
+        title: marker.title,
+        icon: marker.icon,
+      });
     });
-  }, [center, zoom, markers]);
 
-  return <div ref={mapRef} className="h-96 w-full" />;
+    // Draw polyline if provided
+    if (polylinePath && polylinePath.length > 0) {
+      const polyline = new window.google.maps.Polyline({
+        path: polylinePath,
+        geodesic: true,
+        strokeColor: '#FF0000',
+        strokeOpacity: 1.0,
+        strokeWeight: 2,
+      });
+      polyline.setMap(mapInstanceRef.current);
+    }
+
+    return () => {
+      // Cleanup if needed
+    };
+  }, [center, zoom, markers, polylinePath]);
+
+  return <div ref={mapRef} style={{ height: '500px', width: '100%' }} />;
 }
 
 export default Map;
