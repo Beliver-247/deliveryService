@@ -12,4 +12,6 @@ public interface DeliveryService {
     Delivery updateDelivery(Delivery delivery);
     Delivery getDeliveryById(String deliveryId);
     List<Delivery> getAllDeliveries();
+    void deleteDelivery(String deliveryId);
+
 }

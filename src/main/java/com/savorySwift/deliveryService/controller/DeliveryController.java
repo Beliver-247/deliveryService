@@ -193,6 +193,13 @@ public class DeliveryController {
         return ResponseEntity.ok(deliveryService.getDeliveryById(deliveryId));
     }
 
+    @DeleteMapping("/{deliveryId}")
+    public ResponseEntity<Void> deleteDelivery(@PathVariable String deliveryId) {
+        deliveryService.deleteDelivery(deliveryId); 
+        return ResponseEntity.noContent().build();
+    }
+
+
     // Request DTOs
     public static class DeliveryRequest {
         private String orderId;
