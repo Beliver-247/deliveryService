@@ -134,6 +134,15 @@ public class DeliveryServiceImpl implements DeliveryService {
                 .orElseThrow(() -> new RuntimeException("Delivery not found"));
     }
 
+    @Override
+    public void deleteDelivery(String deliveryId) {
+        if (!deliveryRepository.existsById(deliveryId)) {
+            throw new RuntimeException("Delivery not found with ID: " + deliveryId);
+        }
+        deliveryRepository.deleteById(deliveryId);
+    }
+
+
     public List<Delivery> getAllDeliveries() {
         return deliveryRepository.findAll();
     }

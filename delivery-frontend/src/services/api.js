@@ -9,3 +9,5 @@ export const getDeliveryById = (deliveryId) => axios.get(`${API_BASE_URL}/delive
 export const getDrivers = () => axios.get(`${API_BASE_URL}/drivers`);
 export const updateDriverResponse = (deliveryId, response) =>
   axios.put(`${API_BASE_URL}/delivery/${deliveryId}/driver-response`, { response });
+
+export const deleteDelivery = (deliveryId) => axios.delete(`${API_BASE_URL}/delivery/${deliveryId}`);
