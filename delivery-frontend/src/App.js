@@ -3,6 +3,7 @@ import CreateDelivery from './pages/CreateDelivery';
 import ViewDeliveries from './pages/ViewDeliveries';
 import TrackDelivery from './pages/TrackDelivery';
 import DriverDashboard from './pages/DriverDashboard';
+import DriverSimulator from './components/DriverSimulator';
 import UpdateDriverAvailability from './pages/UpdateDriverAvailability';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="/deliveries/:deliveryId" element={<TrackDelivery />} />
         <Route path="/driver" element={<DriverDashboard />} />
         <Route path="/drivers/availability" element={<UpdateDriverAvailability />} />
+        <Route path="/simulate/:deliveryId" element={<DriverSimulator />} />
       </Routes>
     </BrowserRouter>
   );
