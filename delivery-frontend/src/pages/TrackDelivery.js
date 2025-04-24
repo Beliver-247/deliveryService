@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import axios from 'axios';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { Loader } from '@googlemaps/js-api-loader';
@@ -201,6 +202,11 @@ function TrackDelivery() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <h2 className="text-xl font-semibold mb-2">Delivery Details</h2>
+          {status === 'DELIVERY_CONFIRMED' && (
+            <p className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-2 rounded mb-2">
+              Delivery Confirmed
+            </p>
+          )}
           <p>
             <strong>Status:</strong> {status}
           </p>

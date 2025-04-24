@@ -44,9 +44,16 @@ function DeliveryCard({ delivery }) {
       className="border p-4 rounded-md hover:bg-gray-100 cursor-pointer"
       onClick={() => navigate(`/deliveries/${delivery.id}`)}
     >
-      <p>
-        <strong>Order ID:</strong> {delivery.orderId}
-      </p>
+      <div className="flex justify-between items-center">
+        <p>
+          <strong>Order ID:</strong> {delivery.orderId}
+        </p>
+        {delivery.status === 'DELIVERY_CONFIRMED' && (
+          <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+            Confirmed
+          </span>
+        )}
+      </div>
       <p>
         <strong>Status:</strong> {delivery.status}
       </p>
@@ -81,7 +88,7 @@ function DeliveryCard({ delivery }) {
             isConfirming ? 'opacity-50 cursor-not-allowed' : ''
           }`}
           onClick={(e) => {
-            e.stopPropagation(); // Prevent card click navigation
+            e.stopPropagation();
             handleConfirmDelivery();
           }}
           disabled={isConfirming}
