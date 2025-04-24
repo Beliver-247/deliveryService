@@ -195,7 +195,7 @@ public class DeliveryController {
 
     @DeleteMapping("/{deliveryId}")
     public ResponseEntity<Void> deleteDelivery(@PathVariable String deliveryId) {
-        deliveryService.deleteDelivery(deliveryId); 
+        deliveryService.deleteDelivery(deliveryId);
         return ResponseEntity.noContent().build();
     }
 

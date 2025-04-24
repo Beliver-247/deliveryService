@@ -3,13 +3,13 @@ import axios from 'axios';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
-
 function DriverDashboard() {
   const [deliveries, setDeliveries] = useState([]);
   const stompClientRef = useRef(null);
+  const subscriptionsRef = useRef([]);
 
   useEffect(() => {
-    // Fetch deliveries
+    // Fetch initial deliveries
     const fetchDeliveries = async () => {
       try {
         const response = await axios.get('http://localhost:8080/api/delivery');
@@ -27,41 +27,57 @@ function DriverDashboard() {
     const client = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8080/delivery-websocket'),
       debug: (str) => console.log(str),
-      reconnectDelay: 5000, // auto reconnect
+      reconnectDelay: 5000,
     });
-    
 
     client.onConnect = () => {
       stompClientRef.current = client;
-    
+
+      // Subscribe to new delivery notifications
+      const newDeliverySub = client.subscribe('/topic/deliveries', (message) => {
+        const newDelivery = JSON.parse(message.body);
+        if (newDelivery.status === 'WAITING_FOR_DRIVER_RESPONSE') {
+          setDeliveries((prev) => {
+            // Avoid duplicates
+            if (prev.some((d) => d.id === newDelivery.id)) {
+              return prev;
+            }
+            return [...prev, newDelivery];
+          });
+        }
+      });
+      subscriptionsRef.current.push(newDeliverySub);
+
+      // Subscribe to driver response updates for existing deliveries
       deliveries.forEach((delivery) => {
-        client.subscribe(`/topic/delivery/${delivery.id}/driver-response`, (message) => {
+        const sub = client.subscribe(`/topic/delivery/${delivery.id}/driver-response`, (message) => {
           const update = JSON.parse(message.body);
           setDeliveries((prev) =>
             prev.map((d) =>
-              d.id === delivery.id ? { ...d, status: update.response } : d
+              d.id === delivery.id ? { ...d, status: update.response === 'ACCEPT' ? 'DRIVER_ASSIGNED' : 'DRIVER_REJECTED' } : d
             )
           );
         });
+        subscriptionsRef.current.push(sub);
       });
     };
-    
+
     client.onStompError = (frame) => {
       console.error('Broker error:', frame.headers['message']);
     };
-    
-    client.activate(); // starts the connection
-    
+
+    client.activate();
 
     // Cleanup WebSocket connection and subscriptions
     return () => {
-      if (stompClientRef.current && stompClientRef.current.active) {
+      if (stompClientRef.current) {
+        subscriptionsRef.current.forEach((sub) => sub.unsubscribe());
+        subscriptionsRef.current = [];
         stompClientRef.current.deactivate();
         console.log('WebSocket disconnected');
       }
     };
   }, [deliveries]);
-    
 
   const handleDriverResponse = async (deliveryId, response) => {
     try {
