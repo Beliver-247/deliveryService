@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
+// Existing API functions (unchanged)
 export const createDelivery = (data) => axios.post(`${API_BASE_URL}/delivery`, data);
 export const assignDriver = (deliveryId) => axios.post(`${API_BASE_URL}/delivery/${deliveryId}/assign-driver`);
 export const getDeliveries = () => axios.get(`${API_BASE_URL}/delivery`);
@@ -16,3 +17,7 @@ export const updateDriverLocation = (deliveryId, location) =>
   axios.put(`${API_BASE_URL}/delivery/${deliveryId}/location`, location);
 export const updateDeliveryStatus = (deliveryId, status) =>
   axios.put(`${API_BASE_URL}/delivery/${deliveryId}/status`, { status });
+
+// New function to confirm delivery
+export const confirmDelivery = (deliveryId) =>
+  axios.put(`${API_BASE_URL}/delivery/${deliveryId}/confirm`, {});
