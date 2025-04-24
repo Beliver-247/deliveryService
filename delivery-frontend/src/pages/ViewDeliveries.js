@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import DeliveryCard from '../components/DeliveryCard';
-import { getDeliveries, getDrivers, deleteDelivery } from '../services/api';
+import { getDeliveries, deleteDelivery } from '../services/api';
 
 function ViewDeliveries() {
   const [deliveries, setDeliveries] = useState([]);
-  const [drivers, setDrivers] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -19,18 +18,6 @@ function ViewDeliveries() {
       }
     };
 
-    const fetchDrivers = async () => {
-      try {
-        const response = await getDrivers();
-        setDrivers(response.data);
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching drivers:', error);
-        setError('Failed to load drivers. Please try again.');
-      }
-    };
-
-    fetchDrivers();
     fetchDeliveries();
   }, []);
 
