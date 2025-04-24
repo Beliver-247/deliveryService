@@ -81,6 +81,9 @@ public class DeliveryController {
             driver.setAvailable(false);
             driverService.updateDriver(delivery.getDriverId(), driver);
 
+            // Notify driver response for ACCEPT
+            webSocketService.notifyDriverResponse(deliveryId, "ACCEPT");
+
             // Log for debugging
             System.out.println("Driver accepted: " + delivery.getStatus() + ", Assignment: " + delivery.getAssignmentStatus());
         } else if (request.getResponse().equalsIgnoreCase("REJECT")) {
