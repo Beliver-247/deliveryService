@@ -4,8 +4,8 @@ import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { Loader } from '@googlemaps/js-api-loader';
 import Map from '../components/Map';
+import StatusUpdate from '../components/StatusUpdate';
 import { formatTimestamp } from '../utils/helpers';
-import toast, { Toaster } from 'react-hot-toast';
 import { getDeliveryById, getDriverById, confirmDelivery } from '../services/api';
 
 function TrackDelivery() {
@@ -45,12 +45,13 @@ function TrackDelivery() {
             setDriver(driverResponse.data);
           } catch (err) {
             console.error('Error fetching driver:', err);
-            toast.error('Failed to load driver details');
+            // Display error in StatusUpdate component
+            setStatus('ERROR');
           }
         }
       } catch (error) {
         console.error('Error fetching delivery:', error);
-        toast.error('Failed to load delivery');
+        setStatus('ERROR');
       }
     };
 
@@ -68,33 +69,11 @@ function TrackDelivery() {
           if (update.driver) {
             setDriver(update.driver);
           }
-          switch (update.status) {
-            case 'DRIVER_ON_WAY_TO_RESTAURANT':
-              toast.success('Driver is on the way to the restaurant');
-              break;
-            case 'DRIVER_AT_RESTAURANT':
-              toast.success('Driver has arrived at the restaurant');
-              break;
-            case 'DRIVER_LEFT_RESTAURANT':
-              toast.success('Driver has left the restaurant');
-              break;
-            case 'DRIVER_ON_WAY_TO_DELIVERY':
-              toast.success('Driver is on the way to you');
-              break;
-            case 'DRIVER_ARRIVED':
-              toast.success('Driver has arrived at your location');
-              break;
-            case 'DELIVERY_CONFIRMED':
-              toast.success('Delivery confirmed');
-              break;
-            default:
-              break;
-          }
         });
       },
       onStompError: (frame) => {
         console.error('Broker error:', frame.headers['message']);
-        toast.error('WebSocket connection error');
+        setStatus('ERROR');
       },
     });
 
@@ -150,7 +129,7 @@ function TrackDelivery() {
       setRoutePath(path);
     } catch (err) {
       console.error('Error calculating route:', err);
-      toast.error('Failed to load route');
+      setStatus('ERROR');
     }
   };
 
@@ -159,14 +138,22 @@ function TrackDelivery() {
       setIsConfirming(true);
       try {
         await confirmDelivery(deliveryId);
-        toast.success('Delivery confirmed successfully');
+        setStatus('DELIVERY_CONFIRMED');
       } catch (err) {
         console.error('Error confirming delivery:', err);
-        toast.error('Failed to confirm delivery');
+        setStatus('ERROR');
       } finally {
         setIsConfirming(false);
       }
     }
+  };
+
+  // Handle error status
+  const getStatusMessage = () => {
+    if (status === 'ERROR') {
+      return 'An error occurred while processing the delivery';
+    }
+    return status;
   };
 
   if (!delivery) {
@@ -196,7 +183,7 @@ function TrackDelivery() {
 
   return (
     <div className="container mx-auto p-4">
-      <Toaster position="top-right" />
+      <StatusUpdate status={getStatusMessage()} />
       <h1 className="text-2xl font-bold mb-4">Track Delivery: {delivery.orderId}</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
