@@ -1,5 +1,6 @@
 package com.savorySwift.deliveryService.controller;
 
+import com.savorySwift.deliveryService.client.OrderServiceClient;
 import com.savorySwift.deliveryService.model.Delivery;
 import com.savorySwift.deliveryService.model.Driver;
 import com.savorySwift.deliveryService.model.Location;
@@ -20,6 +21,9 @@ public class DeliveryController {
 
     @Autowired
     private DeliveryService deliveryService;
+
+    @Autowired
+    private OrderServiceClient orderServiceClient;
 
     @Autowired
     private DriverAssignmentService driverAssignmentService;
@@ -78,9 +82,13 @@ public class DeliveryController {
             driver.setAvailable(false);
             driverService.updateDriver(delivery.getDriverId(), driver);
 
+            // Update order status to PICKED_UP
+            if (delivery.getOrderId() != null) {
+                orderServiceClient.updateOrderStatus(delivery.getOrderId(), "PICKED_UP");
+            }
+
             webSocketService.notifyDriverResponse(deliveryId, "ACCEPT");
 
-            System.out.println("Driver accepted: " + delivery.getStatus() + ", Assignment: " + delivery.getAssignmentStatus());
         } else if (request.getResponse().equalsIgnoreCase("REJECT")) {
             delivery.setAssignmentStatus("REJECTED");
             delivery.addStatusChange("DRIVER_REJECTED");
@@ -96,6 +104,12 @@ public class DeliveryController {
             } catch (RuntimeException e) {
                 delivery.setStatus("NO_DRIVERS_AVAILABLE");
                 delivery.addStatusChange("NO_DRIVERS_AVAILABLE");
+
+                // Update order status to CANCELLED if no drivers available
+                if (delivery.getOrderId() != null) {
+                    orderServiceClient.updateOrderStatus(delivery.getOrderId(), "CANCELLED");
+                }
+
                 Delivery updatedDelivery = deliveryService.updateDelivery(delivery);
                 webSocketService.notifyDriverResponse(deliveryId, "NO_DRIVERS_AVAILABLE");
                 return ResponseEntity.ok(updatedDelivery);
@@ -111,20 +125,11 @@ public class DeliveryController {
             delivery.addStatusChange("REASSIGNED_TO_NEW_DRIVER");
 
             webSocketService.notifyDriverResponse(deliveryId, "REJECTED_AND_REASSIGNED");
-
-            System.out.println("Driver rejected, reassigned to new driver: " + newDriverId +
-                    ", Status: " + delivery.getStatus() +
-                    ", Assignment: " + delivery.getAssignmentStatus());
         } else {
             throw new IllegalArgumentException("Invalid response: must be ACCEPT or REJECT");
         }
 
         Delivery updatedDelivery = deliveryService.updateDelivery(delivery);
-
-        System.out.println("Saved delivery: Status=" + updatedDelivery.getStatus() +
-                ", Assignment=" + updatedDelivery.getAssignmentStatus() +
-                ", DriverId=" + updatedDelivery.getDriverId() +
-                ", History=" + updatedDelivery.getStatusHistory());
 
         webSocketService.sendRealTimeLocationUpdate(
                 deliveryId,
@@ -160,7 +165,33 @@ public class DeliveryController {
     public ResponseEntity<Delivery> updateDeliveryStatus(
             @PathVariable String deliveryId,
             @RequestBody StatusUpdateRequest request) {
-        return ResponseEntity.ok(deliveryService.updateDeliveryStatus(deliveryId, request.getStatus()));
+
+        Delivery delivery = deliveryService.updateDeliveryStatus(deliveryId, request.getStatus());
+
+        // Map delivery status to order status
+        if (delivery.getOrderId() != null) {
+            String orderStatus = mapDeliveryStatusToOrderStatus(request.getStatus());
+            if (orderStatus != null) {
+                orderServiceClient.updateOrderStatus(delivery.getOrderId(), orderStatus);
+            }
+        }
+
+        return ResponseEntity.ok(delivery);
+    }
+
+    private String mapDeliveryStatusToOrderStatus(String deliveryStatus) {
+        switch (deliveryStatus) {
+            case "DRIVER_ASSIGNED":
+                return "PICKED_UP";
+            case "ON_THE_WAY":
+                return "ON_THE_WAY";
+            case "DELIVERY_CONFIRMED":
+                return "DELIVERED";
+            case "CANCELLED":
+                return "CANCELLED";
+            default:
+                return null;
+        }
     }
 
     @PutMapping("/{deliveryId}/location")
