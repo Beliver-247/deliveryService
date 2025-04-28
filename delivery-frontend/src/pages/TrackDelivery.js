@@ -6,7 +6,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 import Map from '../components/Map';
 import StatusUpdate from '../components/StatusUpdate';
 import { formatTimestamp } from '../utils/helpers';
-import { getDeliveryById, getDriverById, confirmDelivery } from '../services/api';
+import { getDeliveryById, getDriverById, confirmDelivery } from '../services/deliveryApi';
 
 function TrackDelivery() {
   const { deliveryId } = useParams();

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getDriverById, confirmDelivery } from '../services/api';
+import { getDriverById, confirmDelivery } from '../services/deliveryApi';
 import toast from 'react-hot-toast';
 
 function DeliveryCard({ delivery }) {

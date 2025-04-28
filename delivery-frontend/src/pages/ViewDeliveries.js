@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import DeliveryCard from '../components/DeliveryCard';
 import StatusUpdate from '../components/StatusUpdate';
-import { getDeliveries, deleteDelivery } from '../services/api';
+import { getDeliveries, deleteDelivery } from '../services/deliveryApi';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 

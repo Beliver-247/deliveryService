@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader } from '@googlemaps/js-api-loader';
-import { getDeliveryById, updateDriverLocation, updateDeliveryStatus } from '../services/api';
+import { getDeliveryById, updateDriverLocation, updateDeliveryStatus } from '../services/deliveryApi';
 
 function DriverSimulator() {
   const { deliveryId } = useParams();

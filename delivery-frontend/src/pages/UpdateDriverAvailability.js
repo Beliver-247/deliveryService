@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDrivers, updateDriver } from '../services/api';
+import { getDrivers, updateDriver } from '../services/deliveryApi';
 
 function UpdateDriverAvailability() {
   const [drivers, setDrivers] = useState([]);
